@@ -21,9 +21,6 @@
 #include "ptu_interfaces/action/set_tilt.hpp"
 #include "ptu_interfaces/action/set_pan_tilt.hpp"
 
-#include "hal_ptu_flir_d46/driver.h"
-#include <serial/serial.h>
-
 #include <chrono>
 #include <cstdlib>
 #include <memory>
@@ -42,7 +39,7 @@ class HALFakePTU : public rclcpp::Node {
     using SetPanTiltAction = ptu_interfaces::action::SetPanTilt;
     using GoalHandlePanTiltAction = rclcpp_action::ServerGoalHandle<SetPanTiltAction>;
 
-    HALFakePTU() : Node("hal_flir_d46") {}
+    HALFakePTU() : Node("hal_fake_ptu") {}
     
     bool init() {
 
@@ -55,7 +52,7 @@ class HALFakePTU : public rclcpp::Node {
         
         pan_min = declare_parameter("limits.min_pan", -1.0);
         pan_max = declare_parameter("limits.max_pan", 1.0);
-        pan_speed = declare_parameter("limits.min_pan_speed", 0.1);
+        pan_speed = declare_parameter("limits.pan_speed", 0.1);
 
         min_threshold_to_move_pan = declare_parameter("min_thresold_command_input_pan", 0.001);
         min_threshold_to_move_tilt = declare_parameter("min_thresold_command_input_tilt", 0.001);
@@ -113,7 +110,7 @@ class HALFakePTU : public rclcpp::Node {
         );
 
         int hz;
-        hz = declare_parameter("hz", PTU_DEFAULT_HZ);
+        hz = declare_parameter("hz", 10.0);
         timer_ = this->create_wall_timer(1000ms / hz, std::bind(&HALFakePTU::spinCallback, this));
             
         return true;
@@ -130,9 +127,7 @@ class HALFakePTU : public rclcpp::Node {
 
     double pan_min, pan_max, tilt_min, tilt_max;
 
-    double pan_speed, pan_speed_max, tilt_speed, tilt_speed_max;
-
-    double pan_resolution, tilt_resolution;
+    double pan_speed, tilt_speed;
 
     double min_threshold_to_move_pan, min_threshold_to_move_tilt;
     
@@ -179,7 +174,7 @@ class HALFakePTU : public rclcpp::Node {
         {
             while(1){
 
-                current_pan = current_pan + pan_speed * loop_time_sec;
+                current_pan = current_pan + pan_speed * loop_time_sec * (request->pan - current_pan);
 
                 if(abs(request->pan - current_pan) < min_threshold_to_move_pan)
                 {
@@ -205,9 +200,9 @@ class HALFakePTU : public rclcpp::Node {
             
             while(1){
 
-                current_tilt = current_tilt + tilt_speed * loop_time_sec;
+                current_tilt = current_tilt + tilt_speed * loop_time_sec * (request->tilt - current_tilt);
 
-                if(abs(request->pan - current_tilt) < min_threshold_to_move_pan)
+                if(abs(request->tilt - current_tilt) < min_threshold_to_move_pan)
                 {
                     break;
                 }
@@ -231,7 +226,7 @@ class HALFakePTU : public rclcpp::Node {
         {
             while(1){
 
-                current_pan = current_pan + pan_speed * loop_time_sec;
+                current_pan = current_pan + pan_speed * loop_time_sec * (request->pan - current_pan);
 
                 if(abs(request->pan - current_pan) < min_threshold_to_move_pan)
                 {
@@ -248,7 +243,7 @@ class HALFakePTU : public rclcpp::Node {
             
             while(1){
 
-                current_tilt = current_tilt + tilt_speed * loop_time_sec;
+                current_tilt = current_tilt + tilt_speed * loop_time_sec * (request->tilt - current_tilt);
 
                 if(abs(request->pan - current_tilt) < min_threshold_to_move_pan)
                 {
@@ -274,7 +269,7 @@ class HALFakePTU : public rclcpp::Node {
     }
 
     
-    void spinCallback(){ì
+    void spinCallback(){
         // Publish Position & Speed
         ptu_interfaces::msg::PTU ptu_msg;
         ptu_msg.header.stamp = now();
@@ -327,7 +322,7 @@ class HALFakePTU : public rclcpp::Node {
         {
             while(1){
 
-                current_pan = current_pan + pan_speed * loop_time_sec;
+                current_pan = current_pan + pan_speed * loop_time_sec * (goal->pan - current_pan);
 
                 if (goal_handle->is_canceling()) {
                     result->ret = false;
@@ -397,7 +392,7 @@ class HALFakePTU : public rclcpp::Node {
 
             while(1){
 
-                current_tilt = current_tilt + tilt_speed * loop_time_sec;
+                current_tilt = current_tilt + tilt_speed * loop_time_sec * (goal->tilt - current_tilt);
 
                 if (goal_handle->is_canceling()) {
                     result->ret = false;
@@ -479,10 +474,10 @@ class HALFakePTU : public rclcpp::Node {
                 }
 
                 if(abs(goal->tilt - current_tilt) >= min_threshold_to_move_pan)
-                    current_tilt = current_tilt + tilt_speed * loop_time_sec;
+                    current_tilt = current_tilt + tilt_speed * loop_time_sec * (goal->tilt - current_tilt);
 
                 if(abs(goal->pan - current_pan) >= min_threshold_to_move_pan)
-                    current_pan = current_pan + pan_speed * loop_time_sec;
+                    current_pan = current_pan + pan_speed * loop_time_sec * (goal->pan - current_pan);
 
                 if(abs(goal->pan - current_pan) < min_threshold_to_move_pan and abs(goal->tilt - current_tilt) < min_threshold_to_move_tilt)
                 {

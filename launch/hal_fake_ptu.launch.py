@@ -14,19 +14,14 @@ from launch.actions.execute_process import ExecuteProcess
 
 def generate_launch_description():
 
-    params = os.path.join(get_package_share_directory("hal_flir_d46"), 'params', 'params_pasqualone.yaml')
+    params = os.path.join(get_package_share_directory("hal_fake_ptu"), 'params', 'params.yaml')
     
-    for arg in sys.argv:
-        if arg.startswith("project:="):
-            project = arg.split(":=")[1]
-            params = os.path.join(get_package_share_directory("hal_flir_d46"), 'params', 'params_' + project + '.yaml')
-        
     return LaunchDescription([
         
         Node(
-            package='hal_flir_d46',
-            executable='hal_flir_d46',
-            name='hal_flir_d46',
+            package='hal_fake_ptu',
+            executable='hal_ptu',
+            name='hal_ptu',
             output={
                     "stdout": "screen",
                     "stderr": "screen",

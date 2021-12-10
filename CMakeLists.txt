@@ -23,14 +23,19 @@ find_package(rclcpp_components REQUIRED)
 find_package(rcutils)
 find_package(std_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
-find_package(sensor_msgs REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 find_package(ptu_interfaces REQUIRED)
 
-include_directories(include)
-
 add_executable(hal_fake_ptu src/hal_fake_ptu.cpp)
-ament_target_dependencies(hal_fake_ptu rclcpp rcutils sensor_msgs std_msgs std_srvs ptu_interfaces rclcpp_action rclcpp_components)
+ament_target_dependencies(hal_fake_ptu 
+  rclcpp 
+  rcutils 
+  std_msgs 
+  std_srvs 
+  rclcpp_action 
+  rclcpp_components
+  ptu_interfaces 
+)
 
 install(TARGETS hal_fake_ptu
   EXPORT export_${PROJECT_NAME}

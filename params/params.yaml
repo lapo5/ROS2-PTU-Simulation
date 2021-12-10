@@ -1,6 +1,6 @@
-hal_fake_ptu:
+hal_ptu:
   ros__parameters:
-    hz: 10
+    hz: 10.0
 
     # Ranges for Pan/Tilt. 
     limits.min_tilt: -0.3
