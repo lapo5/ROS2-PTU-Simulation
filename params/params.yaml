@@ -1,4 +1,4 @@
-hal_ptu:
+hal_fake_ptu:
   ros__parameters:
     hz: 10.0
 
