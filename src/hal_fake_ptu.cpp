@@ -362,7 +362,7 @@ class HALFakePTU : public rclcpp::Node {
         rclcpp::Rate loop_rate(internal_rate);
         const auto goal = goal_handle->get_goal();
         auto feedback = std::make_shared<SetPanAction::Feedback>();
-        float perc_of_compl = 0;
+        double perc_of_compl = 0.0;
 
         auto result = std::make_shared<SetPanAction::Result>();
 
@@ -441,7 +441,7 @@ class HALFakePTU : public rclcpp::Node {
         rclcpp::Rate loop_rate(internal_rate);
         const auto goal = goal_handle->get_goal();
         auto feedback = std::make_shared<SetTiltAction::Feedback>();
-        float perc_of_compl = 0;
+        double perc_of_compl = 0.0;
 
         auto result = std::make_shared<SetTiltAction::Result>();
 
@@ -522,8 +522,8 @@ class HALFakePTU : public rclcpp::Node {
         rclcpp::Rate loop_rate(internal_rate);
         const auto goal = goal_handle->get_goal();
         auto feedback = std::make_shared<SetPanTiltAction::Feedback>();
-        float perc_of_compl_pan = 0;
-        float perc_of_compl_tilt = 0;
+        double perc_of_compl_pan = 0.0;
+        double perc_of_compl_tilt = 0.0;
 
         auto result = std::make_shared<SetPanTiltAction::Result>();
 
@@ -559,8 +559,9 @@ class HALFakePTU : public rclcpp::Node {
                     return;
                 }
 
-                if(abs(goal->tilt - current_tilt) >= min_threshold_to_move_pan)
+                if(abs(goal->tilt - current_tilt) >= min_threshold_to_move_tilt)
                     current_tilt = current_tilt + tilt_speed * step_tilt;
+                
 
                 if(abs(goal->pan - current_pan) >= min_threshold_to_move_pan)
                     current_pan = current_pan + pan_speed * step_pan;
@@ -570,8 +571,16 @@ class HALFakePTU : public rclcpp::Node {
                     break;
                 }
 
-                perc_of_compl_pan = 100 - (abs(goal->pan - current_pan) / excursion_pan * 100.0);
-                perc_of_compl_tilt = 100 - (abs(goal->tilt - current_tilt) / excursion_tilt * 100.0);
+                if (abs(goal->pan - current_pan) < min_threshold_to_move_pan)
+                    perc_of_compl_pan = 100.0;
+                else
+                    perc_of_compl_pan = 100.0 - (abs(goal->pan - current_pan) / excursion_pan * 100.0);
+                
+                if (abs(goal->tilt - current_tilt) < min_threshold_to_move_tilt)
+                    perc_of_compl_tilt = 100.0;
+                else
+                    perc_of_compl_tilt = 100.0 - (abs(goal->tilt - current_tilt) / excursion_tilt * 100.0);
+                
                 feedback->percentage_of_completing_pan = perc_of_compl_pan;
                 feedback->percentage_of_completing_tilt = perc_of_compl_tilt;
 
