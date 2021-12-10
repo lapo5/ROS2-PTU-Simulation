@@ -54,6 +54,9 @@ class HALFakePTU : public rclcpp::Node {
         pan_max = declare_parameter("limits.max_pan", 1.0);
         pan_speed = declare_parameter("limits.pan_speed", 0.1);
 
+        min_step = declare_parameter("ptu_resolution", 0.1);
+        internal_rate = declare_parameter("internal_rate", 100.0);
+
         min_threshold_to_move_pan = declare_parameter("min_thresold_command_input_pan", 0.001);
         min_threshold_to_move_tilt = declare_parameter("min_thresold_command_input_tilt", 0.001);
 
@@ -109,10 +112,11 @@ class HALFakePTU : public rclcpp::Node {
             std::bind(&HALFakePTU::handle_accepted_pantilt, this, std::placeholders::_1)
         );
 
-        int hz;
         hz = declare_parameter("hz", 10.0);
+
         timer_ = this->create_wall_timer(1000ms / hz, std::bind(&HALFakePTU::spinCallback, this));
-            
+      
+        RCLCPP_INFO_STREAM(get_logger(), "[FAKE PTU] Node Ready");
         return true;
     }
 
@@ -128,6 +132,10 @@ class HALFakePTU : public rclcpp::Node {
     double pan_min, pan_max, tilt_min, tilt_max;
 
     double pan_speed, tilt_speed;
+    double hz;
+
+    double min_step;
+    double internal_rate;
 
     double min_threshold_to_move_pan, min_threshold_to_move_tilt;
     
@@ -167,15 +175,26 @@ class HALFakePTU : public rclcpp::Node {
     void set_pan_callback(const std::shared_ptr<ptu_interfaces::srv::SetPan::Request> request,
             std::shared_ptr<ptu_interfaces::srv::SetPan::Response>      response){
 
-        double loop_time_sec = 0.05;
-        rclcpp::Rate loop_rate(1/loop_time_sec);
-
+        double loop_time_sec = 1.0/internal_rate;
+        rclcpp::Rate loop_rate(internal_rate);
+        RCLCPP_INFO_STREAM(get_logger(), "[FAKE PTU] set_pan_callback");
+                
         if(abs(request->pan - current_pan) > min_threshold_to_move_pan)
         {
+            double step;
             while(1){
+                step = pan_speed * (request->pan - current_pan);
+                if (abs(step) < this->min_step)
+                {
+                    if (step > 0)
+                        step = this->min_step;
+                    else
+                        step = -1 * this->min_step;
+                }
 
-                current_pan = current_pan + pan_speed * loop_time_sec * (request->pan - current_pan);
+                current_pan = current_pan + loop_time_sec * step;
 
+                RCLCPP_INFO_STREAM(get_logger(), "[FAKE PTU] current_pan:  " << current_pan);
                 if(abs(request->pan - current_pan) < min_threshold_to_move_pan)
                 {
                     break;
@@ -192,16 +211,26 @@ class HALFakePTU : public rclcpp::Node {
     void set_tilt_callback(const std::shared_ptr<ptu_interfaces::srv::SetTilt::Request> request,
             std::shared_ptr<ptu_interfaces::srv::SetTilt::Response>      response){
 
-        double loop_time_sec = 0.05;
-        rclcpp::Rate loop_rate(1/loop_time_sec);
+        double loop_time_sec = 1.0/internal_rate;
+        rclcpp::Rate loop_rate(internal_rate);
         
         if(abs(request->tilt - current_tilt) > min_threshold_to_move_tilt)
         {
-            
+            double step;
+
             while(1){
+                step = tilt_speed * (request->tilt - current_tilt);
+                if (abs(step) < this->min_step)
+                {
+                    if (step > 0)
+                        step = this->min_step;
+                    else
+                        step = -1 * this->min_step;
+                }
 
-                current_tilt = current_tilt + tilt_speed * loop_time_sec * (request->tilt - current_tilt);
+                current_tilt = current_tilt + loop_time_sec * step;
 
+                RCLCPP_INFO_STREAM(get_logger(), "[FAKE PTU] current_tilt:  " << current_tilt);
                 if(abs(request->tilt - current_tilt) < min_threshold_to_move_pan)
                 {
                     break;
@@ -219,14 +248,24 @@ class HALFakePTU : public rclcpp::Node {
     void set_pantilt_callback(const std::shared_ptr<ptu_interfaces::srv::SetPanTilt::Request> request,
             std::shared_ptr<ptu_interfaces::srv::SetPanTilt::Response>      response){
 
-        double loop_time_sec = 0.05;
-        rclcpp::Rate loop_rate(1/loop_time_sec);
+        double loop_time_sec = 1.0/internal_rate;
+        rclcpp::Rate loop_rate(internal_rate);
 
         if(abs(request->pan - current_pan) > min_threshold_to_move_pan)
         {
+            double step;
             while(1){
+                step = pan_speed * (request->pan - current_pan);
+                if (abs(step) < this->min_step)
+                {
+                    if (step > 0)
+                        step = this->min_step;
+                    else
+                        step = -1 * this->min_step;
+                }
 
-                current_pan = current_pan + pan_speed * loop_time_sec * (request->pan - current_pan);
+                current_pan = current_pan + loop_time_sec * step;
+                RCLCPP_INFO_STREAM(get_logger(), "[FAKE PTU] current_pan:  " << current_pan);
 
                 if(abs(request->pan - current_pan) < min_threshold_to_move_pan)
                 {
@@ -240,12 +279,22 @@ class HALFakePTU : public rclcpp::Node {
 
         if(abs(request->tilt - current_tilt) > min_threshold_to_move_tilt)
         {
-            
+            double step;
             while(1){
 
-                current_tilt = current_tilt + tilt_speed * loop_time_sec * (request->tilt - current_tilt);
+                step = tilt_speed * (request->tilt - current_tilt);
+                if (abs(step) < this->min_step)
+                {
+                    if (step > 0)
+                        step = this->min_step;
+                    else
+                        step = -1 * this->min_step;
+                }
 
-                if(abs(request->pan - current_tilt) < min_threshold_to_move_pan)
+                current_tilt = current_tilt + loop_time_sec * step;
+                RCLCPP_INFO_STREAM(get_logger(), "[FAKE PTU] current_tilt:  " << current_tilt);
+
+                if(abs(request->tilt - current_tilt) < min_threshold_to_move_tilt)
                 {
                     break;
                 }
@@ -309,8 +358,8 @@ class HALFakePTU : public rclcpp::Node {
 
     void execute_pan_action(const std::shared_ptr<GoalHandlePanAction> goal_handle)
     {
-        double loop_time_sec = 0.05;
-        rclcpp::Rate loop_rate(1/loop_time_sec);
+        double loop_time_sec = 1.0/internal_rate;
+        rclcpp::Rate loop_rate(internal_rate);
         const auto goal = goal_handle->get_goal();
         auto feedback = std::make_shared<SetPanAction::Feedback>();
         float perc_of_compl = 0;
@@ -320,9 +369,19 @@ class HALFakePTU : public rclcpp::Node {
         double excursion = abs(goal->pan - current_pan);
         if(excursion > min_threshold_to_move_pan)
         {
+            double step;
             while(1){
 
-                current_pan = current_pan + pan_speed * loop_time_sec * (goal->pan - current_pan);
+                step = pan_speed * (goal->pan - current_pan);
+                if (abs(step) < this->min_step)
+                {
+                    if (step > 0)
+                        step = this->min_step;
+                    else
+                        step = -1 * this->min_step;
+                }
+
+                current_pan = current_pan + loop_time_sec * step;
 
                 if (goal_handle->is_canceling()) {
                     result->ret = false;
@@ -378,8 +437,8 @@ class HALFakePTU : public rclcpp::Node {
 
     void execute_tilt_action(const std::shared_ptr<GoalHandleTiltAction> goal_handle)
     {
-        double loop_time_sec = 0.05;
-        rclcpp::Rate loop_rate(1/loop_time_sec);
+        double loop_time_sec = 1.0/internal_rate;
+        rclcpp::Rate loop_rate(internal_rate);
         const auto goal = goal_handle->get_goal();
         auto feedback = std::make_shared<SetTiltAction::Feedback>();
         float perc_of_compl = 0;
@@ -389,10 +448,19 @@ class HALFakePTU : public rclcpp::Node {
         double excursion = abs(goal->tilt - current_tilt);
         if(excursion > min_threshold_to_move_tilt)
         {
-
+            double step;
             while(1){
 
-                current_tilt = current_tilt + tilt_speed * loop_time_sec * (goal->tilt - current_tilt);
+                step = tilt_speed * (goal->tilt - current_tilt);
+                if (abs(step) < this->min_step)
+                {
+                    if (step > 0)
+                        step = this->min_step;
+                    else
+                        step = -1 * this->min_step;
+                }
+
+                current_tilt = current_tilt + loop_time_sec * step;
 
                 if (goal_handle->is_canceling()) {
                     result->ret = false;
@@ -450,8 +518,8 @@ class HALFakePTU : public rclcpp::Node {
 
     void execute_pantilt_action(const std::shared_ptr<GoalHandlePanTiltAction> goal_handle)
     {
-        double loop_time_sec = 0.05;
-        rclcpp::Rate loop_rate(1/loop_time_sec);
+        double loop_time_sec = 1.0/internal_rate;
+        rclcpp::Rate loop_rate(internal_rate);
         const auto goal = goal_handle->get_goal();
         auto feedback = std::make_shared<SetPanTiltAction::Feedback>();
         float perc_of_compl_pan = 0;
@@ -464,8 +532,26 @@ class HALFakePTU : public rclcpp::Node {
         
         if(excursion_pan > min_threshold_to_move_pan or excursion_tilt > min_threshold_to_move_tilt)
         {
-
+            double step_pan, step_tilt;
             while(1){
+                step_pan = loop_time_sec * (goal->pan - current_pan);
+                if (abs(step_pan) < this->min_step)
+                {
+                    if (step_pan > 0)
+                        step_pan = this->min_step;
+                    else
+                        step_pan = -1 * this->min_step;
+                }
+
+                step_tilt = loop_time_sec * (goal->tilt - current_tilt);
+                if (abs(step_tilt) < this->min_step)
+                {
+                    if (step_tilt > 0)
+                        step_tilt = this->min_step;
+                    else
+                        step_tilt = -1 * this->min_step;
+                }
+
 
                 if (goal_handle->is_canceling()) {
                     result->ret = false;
@@ -474,10 +560,10 @@ class HALFakePTU : public rclcpp::Node {
                 }
 
                 if(abs(goal->tilt - current_tilt) >= min_threshold_to_move_pan)
-                    current_tilt = current_tilt + tilt_speed * loop_time_sec * (goal->tilt - current_tilt);
+                    current_tilt = current_tilt + tilt_speed * step_tilt;
 
                 if(abs(goal->pan - current_pan) >= min_threshold_to_move_pan)
-                    current_pan = current_pan + pan_speed * loop_time_sec * (goal->pan - current_pan);
+                    current_pan = current_pan + pan_speed * step_pan;
 
                 if(abs(goal->pan - current_pan) < min_threshold_to_move_pan and abs(goal->tilt - current_tilt) < min_threshold_to_move_tilt)
                 {
@@ -506,7 +592,7 @@ class HALFakePTU : public rclcpp::Node {
 
 int main(int argc, char **argv) {
     rclcpp::init(argc, argv);
-    rclcpp::executors::SingleThreadedExecutor exec;
+    rclcpp::executors::MultiThreadedExecutor exec;
     auto node = std::make_shared<HALFakePTU>();
     if (not node->init()) rclcpp::shutdown();
     exec.add_node(node);

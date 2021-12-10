@@ -2,6 +2,9 @@ hal_ptu:
   ros__parameters:
     hz: 10.0
 
+    ptu_resolution: 0.01
+    internal_rate: 100.0
+
     # Ranges for Pan/Tilt. 
     limits.min_tilt: -0.3
     limits.max_tilt:  0.3

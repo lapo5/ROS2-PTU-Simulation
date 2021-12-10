@@ -20,8 +20,8 @@ def generate_launch_description():
         
         Node(
             package='hal_fake_ptu',
-            executable='hal_ptu',
-            name='hal_ptu',
+            executable='hal_fake_ptu',
+            name='hal_fake_ptu',
             output={
                     "stdout": "screen",
                     "stderr": "screen",
